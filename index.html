@@ -1395,10 +1395,14 @@ svg rect.hit:hover,svg rect.hit:focus{fill:rgba(255,255,255,.06)}
       const st2=document.createElement('style'); st2.textContent='#lock{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--bg,#f6f4ef);padding:16px}#lock .lk{width:100%;max-width:360px;background:var(--panel,#fff);border:1px solid var(--line,#e5e0d5);border-radius:18px;padding:28px 22px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.08)}#lock .lkI{font-size:34px}#lock h2{margin:8px 0 4px;color:var(--txt,#1d1d1f);font-size:20px}#lock p{margin:0 0 16px;color:var(--mute,#777);font-size:14px}#lock form{display:flex;flex-direction:column;gap:10px}#lock input{font:inherit;font-size:16px;padding:12px 14px;border-radius:12px;border:1px solid var(--line2,#d8d2c4);background:var(--panel2,#faf8f3);color:var(--txt,#1d1d1f);text-align:center;letter-spacing:2px}#lock button{font:inherit;font-weight:700;font-size:16px;padding:12px;border:0;border-radius:12px;background:#9A7B12;color:#fff;cursor:pointer}#lock button:disabled{opacity:.6}#lkE{min-height:20px;margin-top:10px;color:#C0392B;font-size:13px}#lock small{display:block;margin-top:14px;color:var(--mute,#888);font-size:11px}';
       document.head.appendChild(st2);
       let enc=null; const b64=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0));
-      const getEnc=async()=>{ if(enc) return enc; const r=await fetch('data.enc?t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw new Error('net'); enc=await r.json(); return enc; };
-      const tryPw=async pw=>{ const e=await getEnc(); const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
-        const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(e.salt),iterations:e.iter,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']);
-        const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(e.iv)},key,b64(e.ct)); return JSON.parse(new TextDecoder().decode(pt)); };
+      const getJ=async f=>{ const r=await fetch(f+'?t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw new Error('net'); return r.json(); };
+      const getEnc=async()=>{ if(enc) return enc; const [k,d]=await Promise.all([getJ('key.enc'),getJ('data.enc')]); enc={k,d}; return enc; };
+      const tryPw=async pw=>{ const {k,d}=await getEnc(); const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
+        const kek=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(k.salt),iterations:k.iter,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']);
+        const pk8=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(k.iv)},kek,b64(k.ct));
+        let dk, pt; try{ const priv=await crypto.subtle.importKey('pkcs8',pk8,{name:'RSA-OAEP',hash:'SHA-256'},false,['decrypt']); const raw=await crypto.subtle.decrypt({name:'RSA-OAEP'},priv,b64(d.wk));
+          dk=await crypto.subtle.importKey('raw',raw,{name:'AES-GCM'},false,['decrypt']); pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(d.iv)},dk,b64(d.ct)); }catch(e){ throw new Error('data'); }
+        return JSON.parse(new TextDecoder().decode(pt)); };
       const done=j=>{ try{localStorage.setItem('ipw',window.__pw);}catch(e){} ov.remove(); const u=document.getElementById('upd'); if(u&&j.updated) u.textContent=j.updated; return {stmts:j.stmts||[],reports:j.reports||[]}; };
       let saved=null; try{saved=localStorage.getItem('ipw');}catch(e){}
       if(saved){ try{ const j=await tryPw(saved); window.__pw=saved; return done(j); }catch(e){ try{localStorage.removeItem('ipw');}catch(_){} } }
