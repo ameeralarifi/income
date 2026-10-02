@@ -419,7 +419,7 @@ svg rect.hit:hover,svg rect.hit:focus{fill:rgba(255,255,255,.06)}
     <div class="card" style="display:flex;flex-direction:column;gap:10px" id="expCard" hidden><h3>مشاركة العرض <small>ملف للعرض فقط • عربي وإنجليزي</small></h3>
         <button class="btn gold" id="expView" type="button">تصدير ملف العرض</button>
         <div class="hint">ينزّل ملف «تقارير قوائم الدخل لجميع الفروع - لحظية» بأحدث الأرقام الموجودة في التطبيق. أرسله بالواتساب أو الإيميل بدل النسخة القديمة.</div>
-        <div class="hint">موقع العرض <b>ameeralarifi.github.io/income</b> يتحدث تلقائياً كل ساعتين من بيانات هذا التطبيق (محمي بكلمة سر).</div>
+        <div class="hint">موقع العرض: <b>financial-reports-sa.github.io</b> — محمي بكلمة سر ويُنشر من بيانات هذا التطبيق.</div>
       </div>
     <div class="side" style="display:flex;flex-direction:column;gap:12px;min-width:0">
       <div class="sec-h"><h2>التقارير المحفوظة</h2><span id="repCount"></span></div>
@@ -484,9 +484,10 @@ svg rect.hit:hover,svg rect.hit:focus{fill:rgba(255,255,255,.06)}
   const isEst=(b,m)=>{ const s=st.stmts[skey(b,m)]; return !!(s&&s.est); };
   function estText(ks,ms,short){ const e=[]; ks.forEach(b=>ms.forEach(m=>{ if(isEst(b,m)) e.push([b,m]); })); if(!e.length) return '';
     const mm=[...new Set(e.map(x=>x[1]))].sort(), bb=[...new Set(e.map(x=>x[0]))]; const s0=st.stmts[skey(e[0][0],e[0][1])]; const nb=(s0.estBase||[]).length||8;
+    const dd=[...new Set(e.map(x=>{ const q=st.stmts[skey(x[0],x[1])]; return q.estDays&&q.estMonthDays&&q.estDays<q.estMonthDays?q.estDays+'/'+q.estMonthDays:''; }))]; const pd=dd.length>1&&dd.some(Boolean)?(EN?' (partial periods differ by branch; expenses prorated)':' (فترات جزئية تختلف حسب الفرع، والمصروفات محسوبة بنفس النسبة)'):s0.estDays&&s0.estMonthDays&&s0.estDays<s0.estMonthDays?(EN?' (partial: '+s0.estDays+' of '+s0.estMonthDays+' days; expenses prorated)':' (فترة جزئية: '+s0.estDays+' من '+s0.estMonthDays+' يوم، والمصروفات محسوبة بنفس النسبة)'):'';
     const who=ks.length>1?(EN?' ('+bb.map(k=>brOf(k).short).join(', ')+')':' ('+bb.map(k=>brOf(k).short).join('، ')+')'):'';
-    if(EN) return 'Estimate: '+mm.map(mLabel).join(', ')+who+(short?' — operating expenses estimated from the '+nb+'-month average':' — revenue and cost of sales are actual; operating expenses are estimated from the average of the last '+nb+' actual months until the final statement is uploaded.');
-    return 'تقديري: '+mm.map(mLabel).join('، ')+who+(short?' — المصروفات التشغيلية مقدّرة بمتوسط آخر '+nb+' أشهر فعلية':' — الإيرادات وتكلفة المبيعات فعلية، والمصروفات التشغيلية مقدّرة بمتوسط آخر '+nb+' أشهر فعلية لحين رفع القائمة النهائية.'); }
+    if(EN) return 'Estimate: '+mm.map(mLabel).join(', ')+pd+who+(short?' — operating expenses estimated from the '+nb+'-month average':' — revenue and cost of sales are actual; operating expenses are estimated from the average of the last '+nb+' actual months until the final statement is uploaded.');
+    return 'تقديري: '+mm.map(mLabel).join('، ')+pd+who+(short?' — المصروفات التشغيلية مقدّرة بمتوسط آخر '+nb+' أشهر فعلية':' — الإيرادات وتكلفة المبيعات فعلية، والمصروفات التشغيلية مقدّرة بمتوسط آخر '+nb+' أشهر فعلية لحين رفع القائمة النهائية.'); }
   function estOpex(br,month,partial){ const base=Object.values(st.stmts).filter(d=>d.br===br&&!d.est&&d.month<month).map(d=>d.month).sort().slice(-8); if(!base.length) return null;
     const G=new Map(); base.forEach(m=>(st.stmts[skey(br,m)].groups||[]).filter(g=>g.cat==='opex').forEach(g=>{ let x=G.get(g.c); if(!x){ x={c:g.c,n:g.n,A:new Map()}; G.set(g.c,x); } (g.a||[]).forEach(q=>{ let a=x.A.get(q.c); if(!a){ a={c:q.c,n:q.n,v:0}; x.A.set(q.c,a); } a.v+=Number(q.v)||0; }); }));
     const P=new Map(); (partial||[]).filter(g=>g.cat==='opex').forEach(g=>(g.a||[]).forEach(q=>P.set(q.c,{g,q})));
